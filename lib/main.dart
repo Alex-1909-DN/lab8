@@ -56,6 +56,22 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  final TextEditingController _login = TextEditingController();
+  final TextEditingController _password = TextEditingController();
+  String? passWord;
+  bool obsecurePassWord = true;
+  var imageSource = "images/question-mark.png";
+  void handleLogin() {
+    setState(() {
+      passWord = _password.text;
+      obsecurePassWord = false;
+      if (passWord == "QWERTY123") {
+        imageSource = "images/idea.png";
+      } else {
+        imageSource = "images/stop.png";
+      }
+    });
+  }
 
   void _incrementCounter() {
     setState(() {
@@ -105,13 +121,27 @@ class _MyHomePageState extends State<MyHomePage> {
           // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+            TextField(
+              controller: _login,
+              decoration: const InputDecoration(
+                  hintText: "Please enter user name",
+                  labelText: "Login",
+                  border: OutlineInputBorder()),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+            TextField(
+              controller: _password,
+              decoration: const InputDecoration(
+                hintText: "Please enter password",
+                labelText: "Password",
+                border: OutlineInputBorder(),
+              ),
+              obscureText: obsecurePassWord,
             ),
+            ElevatedButton(
+              onPressed: handleLogin,
+              child: const Text("Login"),
+            ),
+            Image.asset(imageSource, width: 300, height: 300),
           ],
         ),
       ),
