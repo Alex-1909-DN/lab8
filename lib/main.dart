@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:encrypted_shared_preferences/encrypted_shared_preferences.dart';
-import 'package:lab1/ProfilePage.dart';
-import 'package:lab1/data_repo.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await DataRepository.loadData();
   runApp(const MyApp());
 }
 
@@ -16,15 +11,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        title: 'Flutter Demo',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        home: const MyHomePage(title: 'Login Page'),
-        routes: {
-          '/profile': (context) => ProfilePage(),
-        });
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    );
   }
 }
 
@@ -38,169 +31,119 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final TextEditingController _login = TextEditingController();
-  final TextEditingController _password = TextEditingController();
-  final EncryptedSharedPreferences _storage = EncryptedSharedPreferences();
+  final TextEditingController _item = TextEditingController();
+  final TextEditingController _quantity = TextEditingController();
+  final List<String> _itemList = [];
+  final List<String> _quantityList = [];
 
-  String? passWord;
-  bool _obsecurePassWord = true;
-  var _imageSource = "images/question-mark.png";
-
-  bool _obsecurePassword = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCredentials();
-  }
-
-  Future<void> _loadCredentials() async {
-    String? savedUsername = await _storage.getString('username');
-    String? savedPassword = await _storage.getString('password');
-    if (savedUsername != null && savedPassword != null) {
+  void _addItem() {
+    if (_item.text.isNotEmpty && _quantity.text.isNotEmpty) {
       setState(() {
-        _login.text = savedUsername;
-        _password.text = savedPassword;
+        _itemList.add(_item.text);
+        _quantityList.add(_quantity.text);
       });
-      _showSnackbar();
+      _item.clear();
+      _quantity.clear();
     }
   }
 
-  void _showSnackbar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content:
-            const Text('Previous login name and passwords have been loaded!'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () {
-            setState(() {
-              _login.clear();
-              _password.clear();
-            });
-          },
-        ),
-      ),
-    );
-  }
-
-  Future<void> _handleLogin() async {
+  void _removeItem(int index) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Save Your Login Information?'),
-        content: const Text(
-            'Do you want to save your login information for next time?'),
+        title: const Text('Remove Item?'),
+        content: const Text('Do you want to remove this item?'),
         actions: [
           TextButton(
-            onPressed: () async {
-              await _storage.setString('username', _login.text);
-              await _storage.setString('password', _password.text);
-              DataRepository.loginName = _login.text;
-              DataRepository.password = _password.text;
-              await DataRepository.saveData();
-
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/profile');
-            },
-            child: const Text('Yes'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _storage.remove('username');
-              await _storage.remove('password');
+            onPressed: () {
               Navigator.pop(context);
             },
             child: const Text('No'),
           ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _itemList.removeAt(index);
+                _quantityList.removeAt(index);
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Yes'),
+          )
         ],
       ),
     );
   }
 
-  void _handlePasswordValidation() {
-    setState(() {
-      String password = _password.text;
-      _obsecurePassword = false;
-      if (password == "QWERTY123") {
-        _imageSource = "images/idea.png";
-      } else {
-        _imageSource = "images/stop.png";
-      }
-    });
-  }
-
-  // void _incrementCounter() {
-  //   setState(() {
-  //     _counter++;
-  //   });
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          // TRY THIS: Try changing the color here to a specific color (to
-          // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-          // change color while the other colors stay the same.
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          // Here we take the value from the MyHomePage object that was created by
-          // the App.build method, and use it to set our appbar title.
-          title: Text(widget.title),
-          actions: [
-            OutlinedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/profile');
-              },
-              child: const Text("Profile Page"),
-            )
-          ]),
+        // TRY THIS: Try changing the color here to a specific color (to
+        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+        // change color while the other colors stay the same.
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(widget.title),
+      ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            TextField(
-              controller: _login,
-              decoration: const InputDecoration(
-                  hintText: "Please enter user name",
-                  labelText: "Login",
-                  border: OutlineInputBorder()),
-            ),
-            TextField(
-              controller: _password,
-              decoration: const InputDecoration(
-                hintText: "Please enter password",
-                labelText: "Password",
-                border: OutlineInputBorder(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _item,
+                      decoration: const InputDecoration(
+                          hintText: "Type the item here",
+                          border: OutlineInputBorder()),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _quantity,
+                      decoration: const InputDecoration(
+                        hintText: "Type the quantity here",
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: _addItem,
+                    child: const Text('Click here'),
+                  ),
+                ],
               ),
-              obscureText: _obsecurePassWord,
             ),
-            ElevatedButton(
-              onPressed: () {
-                _handlePasswordValidation();
-                _handleLogin();
-              },
-              child: const Text("Login"),
+            Expanded(
+              child: _itemList.isEmpty
+                  ? const Center(child: Text(' '))
+                  : ListView.builder(
+                      itemCount: _itemList.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Text(
+                                '${index + 1}: ${_itemList[index]} quantity: ${_quantityList[index]}',
+                              ),
+                            ],
+                          ),
+                          onLongPress: () => _removeItem(index),
+                        );
+                      },
+                    ),
             ),
-            Image.asset(_imageSource, width: 300, height: 300),
           ],
         ),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
     );
   }
 }
