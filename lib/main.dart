@@ -1,30 +1,23 @@
-import 'package:encrypted_shared_preferences/encrypted_shared_preferences.dart';
 import 'package:flutter/material.dart';
-import 'package:lab1/data_repo.dart';
-import 'package:lab1/second_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-void main() {
+Future<void> main() async {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Flutter Demo',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        home: const MyHomePage(title: 'My Special App'),
-        routes: {
-          '/second': (context) => SecondPage(),
-        });
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    );
   }
 }
 
@@ -38,176 +31,118 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-  int numCounter = 0;
-  var isChecked = false;
-  final TextEditingController _num1 = TextEditingController();
-  // final TextEditingController _num2 = TextEditingController();
+  final TextEditingController _item = TextEditingController();
+  final TextEditingController _quantity = TextEditingController();
+  final List<String> _itemList = [];
+  final List<String> _quantityList = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _loadCounter();
-    loadData();
-  }
-
-  /// Load the initial counter value from persistent storage on start,
-  /// or fallback to 0 if it doesn't exist.
-  Future<void> _loadCounter() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _counter = prefs.getInt('counter') ?? 0;
-    });
-  }
-
-  void loadData() {
-    EncryptedSharedPreferences esp = EncryptedSharedPreferences();
-    esp.getString('mydata').then((String value) {
+  void _addItem() {
+    if (_item.text.isNotEmpty && _quantity.text.isNotEmpty) {
       setState(() {
-        _num1.text = value;
+        _itemList.add(_item.text);
+        _quantityList.add(_quantity.text);
       });
-
-      /// Prints Hello, World!
-    });
+      _item.clear();
+      _quantity.clear();
+    }
   }
 
-  /// After a click, increment the counter state and
-  /// asynchronously save it to persistent storage.
-  Future<void> _incrementCounter() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _counter = (prefs.getInt('counter') ?? 0) + 1;
-      prefs.setInt('counter', _counter);
-    });
-  }
-
-  // void _incrementCounter() {
-  //   setState(() {
-  //     _counter++;
-  //   });
-  // }
-
-  Widget ListPage() {
-    return Column();
+  void _removeItem(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Item?'),
+        content: const Text('Do you want to remove this item?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _itemList.removeAt(index);
+                _quantityList.removeAt(index);
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Yes'),
+          )
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(
-        child: Text("This is the drawer section!"),
-      ),
       appBar: AppBar(
-        actions: [
-          OutlinedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/second');
-              },
-              child: Text("Button 1")),
-          OutlinedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/third');
-              },
-              child: Text("Button 2"))
-        ],
+        // TRY THIS: Try changing the color here to a specific color (to
+        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+        // change color while the other colors stay the same.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
       body: Center(
-        child: Column(children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Column(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  const Icon(Icons.call),
-                  Text(
-                    "Call".toUpperCase(),
-                    style: const TextStyle(color: Colors.red),
-                  )
+                  Expanded(
+                    child: TextField(
+                      controller: _item,
+                      decoration: const InputDecoration(
+                          hintText: "Type the item here",
+                          border: OutlineInputBorder()),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _quantity,
+                      decoration: const InputDecoration(
+                        hintText: "Type the quantity here",
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: _addItem,
+                    child: const Text('Click here'),
+                  ),
                 ],
               ),
-              Column(
-                children: [
-                  const Icon(
-                    Icons.send,
-                    color: Colors.teal,
-                  ),
-                  Text(
-                    "Route".toUpperCase(),
-                    style: const TextStyle(color: Colors.red),
-                  )
-                ],
-              ),
-              Column(
-                children: [
-                  const Icon(
-                    Icons.share,
-                    color: Colors.teal,
-                  ),
-                  Text("Share".toUpperCase(),
-                      style: const TextStyle(color: Colors.red))
-                ],
-              )
-            ],
-          ),
-          Stack(
-            alignment: AlignmentDirectional.bottomCenter,
-            children: [
-              Text(
-                "Algonquin College",
-                style: TextStyle(fontSize: 30.0),
-              )
-            ],
-          ),
-          Text("You have pressed the button this number of times:"),
-          Text("$_counter"),
-          ElevatedButton(
-              onPressed: _incrementCounter, child: Text("Click me!")),
-          TextField(
-            controller: _num1,
-            decoration: InputDecoration(
-                hintText: "Enter a value to be remembered",
-                border: OutlineInputBorder()),
-          ),
-          ElevatedButton(
-              onPressed: () {
-                EncryptedSharedPreferences esp = EncryptedSharedPreferences();
-                esp.setString('mydata', _num1.value.text).then((bool success) {
-                  if (success) {
-                    print('success');
-                  } else {
-                    print('fail');
-                  }
-                });
-
-                DataRepository.loginName = _num1.value.text;
-                Navigator.pushNamed(context, '/second');
-              },
-              child: Text("Save"))
-        ]),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: "Algonquin"),
-          BottomNavigationBarItem(icon: Icon(Icons.add_call), label: "Phone")
-        ],
-        onTap: (btnIndex) {
-          if (btnIndex == 0) {
-            const snackBar = SnackBar(
-              content: Text("Algonquin College button clicked!"),
-            );
-            ScaffoldMessenger.of(context).showSnackBar(snackBar);
-            launchUrl(Uri.parse("https://www.algonquincollege.com"));
-            // print("Camera button clicked");
-          } else {
-            const snackBar = SnackBar(
-              content: Text("Phone button was clicked!"),
-            );
-            ScaffoldMessenger.of(context).showSnackBar(snackBar);
-            // print("Phone button was clicked");
-          }
-        },
+            ),
+            Expanded(
+              child: _itemList.isEmpty
+                  ? const Center(child: Text(' '))
+                  : ListView.builder(
+                      itemCount: _itemList.length,
+                      itemBuilder: (context, index) {
+                        return GestureDetector(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Text(
+                                '${index + 1}: ${_itemList[index]} quantity: ${_quantityList[index]}',
+                              ),
+                            ],
+                          ),
+                          onLongPress: () => _removeItem(index),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
