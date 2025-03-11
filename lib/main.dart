@@ -1,9 +1,7 @@
-import 'package:encrypted_shared_preferences/encrypted_shared_preferences.dart';
 import 'package:flutter/material.dart';
-import 'package:lab1/data_repo.dart';
-import 'package:lab1/second_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'todo_item.dart';
+import 'database.dart';
+import 'todo_dao.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,200 +13,207 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Flutter Demo',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        home: const MyHomePage(title: 'My Special App'),
-        routes: {
-          '/second': (context) => SecondPage(),
-        });
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const MyHomePage(title: 'Flutter HOME PAGE'),
+    );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
   final String title;
-
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-  int numCounter = 0;
-  var isChecked = false;
-  final TextEditingController _num1 = TextEditingController();
-  // final TextEditingController _num2 = TextEditingController();
+  List<ToDoItem> todoList = [];
+  late TodoDao myDAO;
+  final TextEditingController _item = TextEditingController();
+  final TextEditingController _quantity = TextEditingController();
+  ToDoItem? selectedItem;
+  late int selectedRowNum;
 
   @override
   void initState() {
     super.initState();
-    _loadCounter();
-    loadData();
-  }
-
-  /// Load the initial counter value from persistent storage on start,
-  /// or fallback to 0 if it doesn't exist.
-  Future<void> _loadCounter() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _counter = prefs.getInt('counter') ?? 0;
-    });
-  }
-
-  void loadData() {
-    EncryptedSharedPreferences esp = EncryptedSharedPreferences();
-    esp.getString('mydata').then((String value) {
-      setState(() {
-        _num1.text = value;
+    $FloorAppDatabase
+        .databaseBuilder("app_database.db")
+        .build()
+        .then((database) {
+      myDAO = database.todoDao;
+      myDAO.getAllItems().then((listOfItems) {
+        setState(() {
+          todoList.clear();
+          todoList.addAll(listOfItems);
+        });
       });
-
-      /// Prints Hello, World!
     });
-  }
-
-  /// After a click, increment the counter state and
-  /// asynchronously save it to persistent storage.
-  Future<void> _incrementCounter() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _counter = (prefs.getInt('counter') ?? 0) + 1;
-      prefs.setInt('counter', _counter);
-    });
-  }
-
-  // void _incrementCounter() {
-  //   setState(() {
-  //     _counter++;
-  //   });
-  // }
-
-  Widget ListPage() {
-    return Column();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(
-        child: Text("This is the drawer section!"),
-      ),
       appBar: AppBar(
-        actions: [
-          OutlinedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/second');
-              },
-              child: Text("Button 1")),
-          OutlinedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/third');
-              },
-              child: Text("Button 2"))
-        ],
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
+        centerTitle: true,
       ),
       body: Center(
-        child: Column(children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Column(
-                children: [
-                  const Icon(Icons.call),
-                  Text(
-                    "Call".toUpperCase(),
-                    style: const TextStyle(color: Colors.red),
-                  )
-                ],
-              ),
-              Column(
-                children: [
-                  const Icon(
-                    Icons.send,
-                    color: Colors.teal,
-                  ),
-                  Text(
-                    "Route".toUpperCase(),
-                    style: const TextStyle(color: Colors.red),
-                  )
-                ],
-              ),
-              Column(
-                children: [
-                  const Icon(
-                    Icons.share,
-                    color: Colors.teal,
-                  ),
-                  Text("Share".toUpperCase(),
-                      style: const TextStyle(color: Colors.red))
-                ],
-              )
-            ],
-          ),
-          Stack(
-            alignment: AlignmentDirectional.bottomCenter,
-            children: [
-              Text(
-                "Algonquin College",
-                style: TextStyle(fontSize: 30.0),
-              )
-            ],
-          ),
-          Text("You have pressed the button this number of times:"),
-          Text("$_counter"),
-          ElevatedButton(
-              onPressed: _incrementCounter, child: Text("Click me!")),
-          TextField(
-            controller: _num1,
-            decoration: InputDecoration(
-                hintText: "Enter a value to be remembered",
-                border: OutlineInputBorder()),
-          ),
-          ElevatedButton(
-              onPressed: () {
-                EncryptedSharedPreferences esp = EncryptedSharedPreferences();
-                esp.setString('mydata', _num1.value.text).then((bool success) {
-                  if (success) {
-                    print('success');
-                  } else {
-                    print('fail');
-                  }
-                });
+        child: reactiveLayout(),
+      ),
+    );
+    // This trailing comma makes auto-formatting nicer for build methods.
+  }
 
-                DataRepository.loginName = _num1.value.text;
-                Navigator.pushNamed(context, '/second');
-              },
-              child: Text("Save"))
-        ]),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: "Algonquin"),
-          BottomNavigationBarItem(icon: Icon(Icons.add_call), label: "Phone")
+  Widget reactiveLayout() {
+    var size = MediaQuery.of(context).size;
+    var width = size.width;
+
+    // Layout for different screen sizes
+    if (width > 720) {
+      return Row(
+        children: [
+          // Column for input fields and todo list
+          Expanded(
+            child: Column(
+              children: [
+                inputFieldsWidget(), // Always show input fields
+                Expanded(
+                    child: todoListWidget()), // Todo list takes remaining space
+              ],
+            ),
+          ),
+          // Column for details page (only if item is selected)
+          if (selectedItem != null) Expanded(child: detailsPageWidget()),
         ],
-        onTap: (btnIndex) {
-          if (btnIndex == 0) {
-            const snackBar = SnackBar(
-              content: Text("Algonquin College button clicked!"),
-            );
-            ScaffoldMessenger.of(context).showSnackBar(snackBar);
-            launchUrl(Uri.parse("https://www.algonquincollege.com"));
-            // print("Camera button clicked");
-          } else {
-            const snackBar = SnackBar(
-              content: Text("Phone button was clicked!"),
-            );
-            ScaffoldMessenger.of(context).showSnackBar(snackBar);
-            // print("Phone button was clicked");
-          }
-        },
+      );
+    } else {
+      return Column(
+        children: [
+          inputFieldsWidget(), // Always show input fields
+          if (selectedItem == null) Expanded(child: todoListWidget()),
+          if (selectedItem != null) Expanded(child: detailsPageWidget()),
+        ],
+      );
+    }
+  }
+
+  Widget inputFieldsWidget() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _item,
+              decoration: InputDecoration(hintText: "Type the item here"),
+            ),
+          ),
+          SizedBox(width: 8), // Space between text fields
+          Expanded(
+            child: TextField(
+              controller: _quantity,
+              decoration: InputDecoration(hintText: "Type the quantity here"),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (_item.text.isNotEmpty && _quantity.text.isNotEmpty) {
+                var newItem =
+                    ToDoItem(ToDoItem.ID++, _item.text, _quantity.text);
+                await myDAO.insertItem(newItem);
+                setState(() {
+                  todoList.add(newItem);
+                  _item.text = "";
+                  _quantity.text = "";
+                });
+              } else {
+                const message = SnackBar(
+                    content: Text("Please enter the item and quantity."));
+                ScaffoldMessenger.of(context).showSnackBar(message);
+              }
+            },
+            child: Text("Click to add"),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget todoListWidget() {
+    return ListView.builder(
+      itemCount: todoList.length,
+      itemBuilder: (context, rowNum) {
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              selectedItem = todoList[rowNum];
+              selectedRowNum = rowNum;
+            });
+          },
+          child: Center(
+            child: Text(
+              "${rowNum + 1}: ${todoList[rowNum].item} - Quantity: ${todoList[rowNum].quantity}",
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget detailsPageWidget() {
+    return Column(
+      children: [
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text("Item: ${selectedItem!.item}"),
+              Text("Quantity: ${selectedItem!.quantity}"),
+              Text("ID: ${selectedItem!.id}"),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16.0), // Padding for spacing
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  if (selectedItem != null) {
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text("Item deleted")));
+                    setState(() {
+                      myDAO.deleteItem(selectedItem!);
+                      todoList.removeAt(selectedRowNum);
+                      selectedItem = null; // Deselect after deleting
+                    });
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("No item selected")));
+                  }
+                },
+                child: Text("Delete"),
+              ),
+              SizedBox(width: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    selectedItem = null; // Close the details page
+                  });
+                },
+                child: Text("Close"),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
